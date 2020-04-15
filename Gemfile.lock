@@ -137,6 +137,7 @@ GEM
     data_magic (0.22)
       faker (>= 1.1.2)
       yml_reader (>= 0.6)
+    deep_open_struct (0.1.0)
     diff-lcs (1.3)
     docile (1.1.5)
     em-websocket (0.5.1)
@@ -410,6 +411,7 @@ GEM
       actionpack (>= 3.0)
       activesupport (>= 3.0)
       sprockets (>= 2.8, < 4.0)
+    stomp (1.4.9)
     test-unit (3.3.2)
       power_assert
     thor (0.20.3)
@@ -454,6 +456,7 @@ DEPENDENCIES
   closure-compiler (~> 1.1.11)
   concurrent-ruby (~> 1.0.5)
   dalli (~> 2.7.2)
+  deep_open_struct
   faraday (~> 0.9.0)
   faraday_middleware (~> 0.9.1)
   google-api-client (~> 0.8.6)
@@ -498,6 +501,7 @@ DEPENDENCIES
   signet (~> 0.7.2)
   simplecov (~> 0.14.0)
   simplecov-html (~> 0.10.0)
+  stomp
   test-unit
   warbler (~> 2.0.5)
   webmock (~> 1.20.4)

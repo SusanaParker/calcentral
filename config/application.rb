@@ -112,9 +112,5 @@ module Calcentral
 
     # always be caching
     config.action_controller.perform_caching = true
-
-    config.after_initialize do
-      JmsWorker.new.start if Settings.ist_jms.node == ServerRuntime.get_settings['hostname']
-    end
   end
 end

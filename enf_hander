@@ -1,0 +1,99 @@
+#!/usr/bin/env ruby
+
+require 'rubygems'
+# require 'bundler/setup'
+
+require 'eventmachine'
+require 'stomp'
+require 'yaml'
+require 'deep_open_struct'
+require 'active_support/core_ext/hash'
+require 'httparty'
+
+class Settings
+  attr_reader :env
+
+  def initialize(env)
+    @env = env
+  end
+
+  def merged
+    @merged ||= Hash.new.tap do |settings|
+      config_files.each do |file|
+        if file && File.exists?(file)
+          result = YAML.load_file(file.to_s)
+          settings.deep_merge!(result) if result
+        end
+      end
+    end
+  end
+
+  def config_files
+    [
+      File.join(config_dir, "settings.local.yml"),
+      File.join(config_dir, "#{env}.local.yml"),
+    ]
+  end
+
+  def config_dir
+    path = ENV.fetch('CALCENTRAL_CONFIG_DIR') { File.join(ENV["HOME"], ".calcentral_config") }
+    File.expand_path(path) if File.exists?(path)
+  end
+end
+
+module ENF
+  class Handler
+    attr_reader :settings
+
+    def initialize(settings)
+      @settings = settings
+    end
+
+    def start
+      @running = true
+
+      queues.each do |queue|
+        client.subscribe(queue) do |message|
+          begin
+            response = HTTParty.post('http://localhost:3000/api/enfs', {
+              body: JSON.generate({
+                enf: JSON.parse(message.body)
+              }),
+              headers: headers
+            })
+
+            if response.success?
+              puts "posted message successfully!"
+            else
+              puts "dang! #{response.code}"
+            end
+          rescue
+            puts "Oh noes, something went wrong!"
+          end
+        end
+      end
+    end
+
+    private
+
+    delegate :key, :username, :password, :host, :port, :queues,  to: :settings
+
+    def client
+      @client ||= ::Stomp::Client.new(username, password, host, port)
+    end
+
+    def headers
+      {
+        'Content-Type' => 'application/json',
+        'X-API-KEY' => key
+      }
+    end
+  end
+end
+
+EventMachine.run {
+  settings = ::DeepOpenStruct.new(Settings.new('development').merged).ist_jms
+  handler = ENF::Handler.new(settings).start
+
+  puts "ENF Handler ready and waiting..."
+}

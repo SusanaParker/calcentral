@@ -7,19 +7,25 @@ Calcentral::Application.routes.draw do
 
   root :to => 'bootstrap#index'
 
-  # User management/status endpoints, currently used by all services.
-  get '/api/my/am_i_logged_in' => 'user#am_i_logged_in', :as => :am_i_logged_in, :defaults => { :format => 'json' }
-  get '/api/my/status' => 'user#my_status', :defaults => { :format => 'json' }
-  post '/api/my/record_first_login' => 'user#record_first_login', :as => :record_first_login, :defaults => { :format => 'json' }
+  with_options defaults: { format: :json } do
+    # User management/status endpoints, currently used by all services.
+    get '/api/my/am_i_logged_in' => 'user#am_i_logged_in', :as => :am_i_logged_in
+    get '/api/my/status' => 'user#my_status'
+    post '/api/my/record_first_login' => 'user#record_first_login', :as => :record_first_login
 
-  # System utility endpoints
-  get '/api/cache/clear' => 'cache#clear', :defaults => { :format => 'json' }
-  get '/api/cache/delete' => 'cache#delete', :defaults => { :format => 'json' }
-  get '/api/cache/delete/*key' => 'cache#delete', :defaults => { :format => 'json' }
-  get '/api/config' => 'config#get', :defaults => { :format => 'json' }
-  get '/api/ping' => 'ping#do', :defaults => {:format => 'json'}
-  get '/api/server_info' => 'server_runtime#get_info'
-  get '/api/smoke_test_routes' => 'routes_list#smoke_test_routes', :as => :all_routes, :defaults => { :format => 'json' }
+    scope 'api' do
+      # System utility endpoints
+      get 'cache/clear' => 'cache#clear'
+      get 'cache/delete' => 'cache#delete'
+      get 'cache/delete/*key' => 'cache#delete'
+      get 'config' => 'config#get'
+      get 'ping' => 'ping#do'
+      get 'server_info' => 'server_runtime#get_info'
+      get 'smoke_test_routes' => 'routes_list#smoke_test_routes', :as => :all_routes
+
+      resources :enfs, only: [:create]
+    end
+  end
 
   # Oauth endpoints: Google
   get '/api/google/request_authorization'=> 'google_auth#refresh_tokens'

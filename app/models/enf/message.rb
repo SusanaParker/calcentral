@@ -2,8 +2,7 @@ module ENF
   class Message
     include ActiveModel::Model
 
-    attr_accessor :timestamp
-    attr_accessor :text
+    attr_accessor :eventNotification
 
     def student_uid
       @student_uid ||= User::Current.from_campus_solutions_id(student_campus_solutions_id).uid
@@ -22,12 +21,8 @@ module ENF
     private
 
     def event
-      parsed['eventNotification']['event']
+      eventNotification['event']
     rescue NoMethodError
-    end
-
-    def parsed
-      JSON.parse text
     end
 
     def payload

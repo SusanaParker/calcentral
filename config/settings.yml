@@ -292,14 +292,11 @@ cache_warmer:
 
 # Bearfacts JMS event queue
 ist_jms:
-  fake: true
-  enabled: true
-  freshen_recording: false
-  connections:
-    - url: 'tcp://localhost:61616'
-      queues: ['testqueue']
-      #  username: USERNAME
-      #  password: PASSWORD
+  host: localhost
+  port: 61613
+  username: admin
+  password: admin
+  queues: ['testqueue']
 
 # This will enable http basic auth for the app and should NEVER be enabled in production
 developer_auth:
