@@ -63,6 +63,7 @@ gem 'jruby-activemq', '~> 5.13.0', git: 'https://github.com/ets-berkeley-edu/jru
 # STOMP is an messaging protocol supported by ActiveMQ
 gem 'stomp'
 gem 'deep_open_struct'
+gem 'eventmachine', '1.2.7'
 
 # To support SSL TLSv1.2.
 # jruby-openssl versions 0.9.8 through 0.9.16 trigger runaway memory consumption in CalCentral.

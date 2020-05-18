@@ -1,7 +1,7 @@
 #!/usr/bin/env ruby
 
 require 'rubygems'
-# require 'bundler/setup'
+require 'bundler/setup'
 
 require 'eventmachine'
 require 'stomp'
@@ -9,6 +9,7 @@ require 'yaml'
 require 'deep_open_struct'
 require 'active_support/core_ext/hash'
 require 'httparty'
+require 'logger'
 
 class Settings
   attr_reader :env
@@ -44,9 +45,13 @@ end
 module ENF
   class Handler
     attr_reader :settings
+    attr_reader :retry_queue
+    attr_reader :logger
 
-    def initialize(settings)
+    def initialize(settings, logger)
       @settings = settings
+      @retry_queue = []
+      @logger = logger
     end
 
     def start
@@ -54,29 +59,50 @@ module ENF
 
       queues.each do |queue|
         client.subscribe(queue) do |message|
-          begin
-            response = HTTParty.post('http://localhost:3000/api/enfs', {
-              body: JSON.generate({
-                enf: JSON.parse(message.body)
-              }),
-              headers: headers
-            })
-
-            if response.success?
-              puts "posted message successfully!"
-            else
-              puts "dang! #{response.code}"
-            end
-          rescue
-            puts "Oh noes, something went wrong!"
-          end
+          handle(message)
         end
       end
     end
 
+    def handle(message, retries=0)
+      response = HTTParty.post(post_endpoint, {
+        body: JSON.generate({
+          enf: JSON.parse(message.body)
+        }),
+        headers: headers
+      })
+
+      if response.success?
+        logger.info "Message id: #{message_id(message)} posted successfully (#{retries} retry attempts)"
+      else
+        logger.error "Post response failed with HTTP status #{response.code} for message id: #{message_id(message)} (#{retries} retry attempts)"
+        message_failed(message, retries)
+      end
+    rescue Errno::ECONNREFUSED
+      logger.error "Post connection refused for message id: #{message_id(message)} (#{retries} retry attempts)"
+      message_failed(message, retries)
+    end
+
+    def message_failed(message, retries)
+      retry_queue.push([message, retries])
+    end
+
+    def process_failures!
+      while retry_queue.length > 0
+        message, retries = *retry_queue.pop
+        yield message, retries
+      end
+    end
+
+    def processing_retries?
+      @processing_retries
+    end
+
     private
 
-    delegate :key, :username, :password, :host, :port, :queues,  to: :settings
+
+
+    delegate :key, :username, :password, :host, :port, :queues, :post_to, to: :settings
 
     def client
       @client ||= ::Stomp::Client.new(username, password, host, port)
@@ -88,12 +114,42 @@ module ENF
         'X-API-KEY' => key
       }
     end
+
+    def post_endpoint
+      "#{post_to}/api/enfs"
+    end
+
+    def message_id(message)
+      message.headers['message-id']
+    end
   end
 end
 
 EventMachine.run {
   settings = ::DeepOpenStruct.new(Settings.new('development').merged).ist_jms
-  handler = ENF::Handler.new(settings).start
 
-  puts "ENF Handler ready and waiting..."
+  logger = if (settings.log_to)
+    Logger.new(settings.log_to, 'daily')
+  else
+    Logger.new(STDOUT)
+  end
+
+  handler = ENF::Handler.new(settings, logger)
+  handler.start
+
+  EventMachine.add_periodic_timer(1) do
+    handler.process_failures! do |message, retries|
+      if retries < settings.max_retries || 4
+        delay = (settings.initial_retry_timeout || 10) * 2**retries
+        logger.info "Retrying message #{message.headers['message-id']} in #{delay} seconds"
+
+        EventMachine.add_timer(delay) do
+          handler.handle(message, retries + 1)
+        end
+      else
+      end
+    end
+  end
+
+  logger.info "Ready"
 }

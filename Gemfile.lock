@@ -144,7 +144,7 @@ GEM
       eventmachine (>= 0.12.9)
       http_parser.rb (~> 0.6.0)
     erubis (2.7.0)
-    eventmachine (1.0.3-java)
+    eventmachine (1.2.7-java)
     execjs (2.2.1)
     extlib (0.9.16)
     faker (1.6.6)
@@ -457,6 +457,7 @@ DEPENDENCIES
   concurrent-ruby (~> 1.0.5)
   dalli (~> 2.7.2)
   deep_open_struct
+  eventmachine (= 1.2.7)
   faraday (~> 0.9.0)
   faraday_middleware (~> 0.9.1)
   google-api-client (~> 0.8.6)
