@@ -9,15 +9,15 @@
 HOST=$(uname -n)
 MYSCRIPT=`basename "$0"| sed "s/\..*//g"`
 
-# Setting tomcat latest build if no WAR_URL defined for development
-# Retire Torquebox - CalCentral Tomcat new branch
-WAR_URL=${WAR_URL:="https://bamboo-sis.berkeley.edu/browse/CAL-RTCW/latest/artifact/shared/warfile/calcentral.war"}
+# If the WAR_URL is not defined in the environment the deploy will abort for safety, we do not want to default to any branch
+WAR_URL=${WAR_URL}
 MAX_ASSET_AGE_IN_DAYS=${MAX_ASSET_AGE_IN_DAYS:="45"}
 DOC_ROOT="/var/www/html/calcentral"
 
 CC_LOG_DIR="$HOME/calcentral/log"
 LOG=$(date +"${CC_LOG_DIR}/update-build-tomcat_%Y-%m-%d.log")
 LOGIT="tee -a ${LOG}"
+
 
 
 function show_help {
@@ -60,11 +60,17 @@ done
 [[ -s "${HOME}/.rvm/scripts/rvm" ]] && . "${HOME}/.rvm/scripts/rvm"
 source .rvmrc
 
+# If the WAR_URL is not defined in the environment the deploy will abort for safety, we do not want to default to any branch
+if [ -z "$WAR_URL" ] ; then
+     echo "WAR_URL variable not defined in the node"| ${LOGIT}
+     exit 1
+fi
+
 # Update source tree (from which these scripts run)
 
 # Change dir to the calcentral home dir to update the source code from GitHub
 cd ${CLC_HOME} || exit 1
-./script/update-source.sh
+#####./script/update-source.sh
 
 echo | ${LOGIT}
 echo "------------------------------------------" | ${LOGIT}
@@ -93,7 +99,8 @@ echo "$(date): Fetching new calcentral.war from ${WAR_URL}..." | ${LOGIT}
 
 # For now renaming the calcentral.war file to ROOT.war until we decide if we will create a sepatate context to deploy
 # it is using the default Tomcat ROOT location
-curl -k -s ${WAR_URL} > ROOT.war | ${LOGIT}
+curl -k -s ${WAR_URL} > ROOT.war | ${LOGIT} || exit 1
+echo | ${LOGIT}
 
 
 if [ -n "${OFFLINE}" ] ; then
@@ -145,4 +152,4 @@ chmod -R g+w *
 # Give execute to Others for directories only
 find /var/www/html/calcentral/ -type d -execdir chmod o+x {} \;
 
-exit 0
+###exit 0
